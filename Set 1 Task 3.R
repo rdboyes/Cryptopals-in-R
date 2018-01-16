@@ -1,91 +1,47 @@
-make_array <- function(text){
-  text_array <- array(data = NA)
-  for(h in 1:str_length(text)){
-    text_array[h] <- substring(text, h, h)
-  }
-  return(text_array)
-}
+input <- "1b37373331363f78151b7f2b783431333d78397828372d363c78373e783a393b3736"
 
-score_text <- function(text){
-  letterfreq <- "8134922670142782066931202081349226701427820669312020"
-  alphabet <- "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
-  alpha_array <- make_array(alphabet)
-  freq_array <- make_array(letterfreq)
-  text_array <- make_array(text)
-  score <- 0
-  for(i in 1:length(text_array)){
-    for(j in 1:52){
-      if (text_array[i] == alpha_array[j]){
-        score <- score + as.integer(freq_array[j])
-      } 
-    }
-  }
-  return(score)
-}
-
-hex_to_ASCII <- function(text){
-  h <- sapply(seq(1, nchar(text), by=2), function(x) substr(text, x, x+1))
-  rawToChar(as.raw(strtoi(h, 16L)))
-}
-
-hex_XOR_1 <- function(input1, cipher){
-  hexValues <- "123456789abcdef0"
-  hexValues_array <- array(data = NA)
-  int_array1 <- array(data = NA)
-  bin_array1 <- array(data = NA)
-  int_array2 <- array(data = NA)
-  bin_array2 <- array(data = NA)
-  out_array <- array(data = NA)
-  out_array_bin <- array(data = NA)
+bin_plaintext <- function(bin){
+  decode <- array()
+  length <- length(bin)
   output <- ""
-  for(i in 1:(str_length(input1))){
-    int_array1[i] <- as.numeric(as.hexmode(substring(input1, i, i)))
-    b <- 1
-    n <- int_array1[i]
-    while(b < 5) {
-      bin_array1[1+i*4 - b] <- n%%2
-      n <- n%/%2
-      b <- b + 1
-    }
-  }
-  cipher_array <- make_array(cipher)
-  for(i in 1:(str_length(input1))){
-    int_array2[i] <- as.numeric(cipher_array[i%%length(cipher_array)+1])
-    b <- 1
-    n <- int_array2[i]
-    while(b < 5) {
-      bin_array2[1+i*4 - b] <- n%%2
-      n <- n%/%2
-      b <- b + 1
-    }
-  }
-  for(k in 1:length(bin_array1)){
-    out_array_bin[k] <- (bin_array1[k] + bin_array2[k])%%2
-  }
-  for(n in 1:(length(out_array_bin)/4)){
-    out_array[n] <- 8*out_array_bin[n*4-3] + 4*out_array_bin[n*4-2] + 2*out_array_bin[n*4-1] + out_array_bin[n*4]   
-  }
-  for(l in 1:str_length(hexValues)){
-    hexValues_array[l] <- substring(hexValues,l,l)
-  }
-  for(m in 1:length(out_array)){
-    output <- paste0(output,hexValues_array[out_array[m]])
+  for(i in 1:(length/8)){
+    x <- bin[i*2-1,1]*128 + bin[i*2-1,2]*64 + bin[i*2-1,3]*32 + bin[i*2-1,4]*16 + bin[i*2,1]*8 + bin[i*2,2]*4 + bin[i*2,3]*2 + bin[i*2,4]
+    decode[i] <- rawToChar(as.raw(x),10L)
+    output <- paste0(output,decode[i])
   }
   return(output)
 }
 
-input = "1b37373331363f78151b7f2b783431333d78397828372d363c78373e783a393b3736"
-highscore <- 0
-decrypted <- ""
-for(m in 1:127){
-  attempt <- hex_XOR_1(input,m)
-  score <- score_text(hex_to_ASCII(attempt))
-  if (score > highscore){
-    highscore <- score
-    decrypted <- attempt
+decrypt_single_char_xor <- function(hex){
+  keys <- array()
+  hexValues = "0123456789abcdef"
+  encrypt_array <- array()
+  solutions <- array(data = NA)
+  sol_matrix <- matrix(0, ncol = ((str_length(input))/2), nrow = 16*16)
+  common_letters <- c("45","54","4f","41","53","49","4e","61","65","69","6e","6f","74","20")
+  score <- array(data = NA)
+  for(h in 1:(str_length(hexValues))){
+    encrypt_array[h] <- substring(hexValues, h, h)
   }
+  for (i in 1:16){
+    for(j in 1:16){
+      keys[(i-1)*16 + j] <- paste0(encrypt_array[i],encrypt_array[j])
+    }
+  }
+  for(k in 1:length(keys)){
+    solutions[k] <- bin_hex(hex_xor(input,keys[k]))
+    score[k] <- 0
+    for (l in 1:((str_length(input))/2)){
+      sol_matrix[k,l] <- substring(solutions[k],(l*2-1),(l*2))
+      if (sol_matrix[k,l] %in% common_letters) score[k] <- score[k] + 1
+    }
+  }
+  bin <- hex_xor(input,keys[which.is.max(score)])
+  final <- bin_plaintext(bin)
+  print(bin_plaintext(hex_bin(keys[which.is.max(score)])))
+  return(final)
 }
-decrypted
-  
-score_text("hllccadeas")
+
+decrypt_single_char_xor(input)
+
 
