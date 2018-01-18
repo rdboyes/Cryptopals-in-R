@@ -1,6 +1,9 @@
 #import encrypted file
 
 library(readr)
+library(openssl)
+library(stringr)
+
 b64_text <- read_csv("Downloads/b64_text.txt", col_names = FALSE)
 d <- as.matrix(b64_text)
 hex <- base64_decode(d)
@@ -20,14 +23,6 @@ edit_distance <- function(input1, input2){
   return(distance)
 }
 
-#convert the encrypted file to binary
-
-bin_encoded <- hex_bin(hex[1])
-for (i in 2:2876){
-  m <- hex_bin(hex[i])
-  bin_encoded <- rbind(bin_encoded,m)
-}
-
 #test to make sure the edit distance function works
 
 input1 <- "this is a test"
@@ -43,27 +38,42 @@ distances <- array(data = NA)
 
 #compute normalized edit difference for 1st and 2nd block of length = key length
 
+bin_encoded_whole <- array()
+bin_encoded_whole <- hex_bin(hex[1])
+for (i in 2:2876){
+  m <- hex_bin(hex[i])
+  bin_encoded_whole <- rbind(bin_encoded_whole,m)
+}
+
 for(j in 2:40){
-  keyblock1 <- bin_encoded[1:(2*j),1:4]
-  keyblock2 <- bin_encoded[(2*j+1):(4*j),1:4]
-  distances[j] <- (edit_distance(keyblock1,keyblock2)/j)
+  keyblock1 <- bin_encoded_whole[1:(2*j),1:4]
+  keyblock2 <- bin_encoded_whole[(2*j+1):(4*j),1:4]
+  keyblock3 <- bin_encoded_whole[(4*j+1):(6*j),1:4]
+  keyblock4 <- bin_encoded_whole[(6*j+1):(8*j),1:4]
+  distances[j] <- (edit_distance(keyblock1,keyblock2) + edit_distance(keyblock1,keyblock3) + edit_distance(keyblock1,keyblock4) + edit_distance(keyblock2,keyblock4) + edit_distance(keyblock3,keyblock4) + edit_distance(keyblock2,keyblock3))/j
 }
 
 #which key length has the lowest normalized edit distance? 
 
-real_key_length <- which.min(distances)
+real_key_length <- which.min(distances) #29
 
 #Find the key character for each block
 
 single_key_length <- (length(bin_encoded)/8)%/%real_key_length
 
-piece <- bin_encoded[1:2,1:4]
-for(i in 2:single_key_length){
-  x <- (1+2*(i-1)*real_key_length)
-  piece <- rbind(piece,bin_encoded[x:(x+1),1:4])
+#convert the encrypted file to list of n binary matrices
+
+bin_encoded <- list()
+for (a in 1:real_key_length){
+  bin_encoded[[a]] <- hex_bin(hex[a])
+  max_i <- (2877 - a)%/%(real_key_length)
+  for (i in 1:max_i){
+    m <- hex_bin(hex[(a+i*real_key_length)])
+    bin_encoded[[a]] <- rbind(bin_encoded[[a]],m)
+  }
 }
 
-p1 <- bin_hex(piece)
+#function that decrypts single char xor
 
 decrypt_single_char_xor <- function(hex){
   keys <- array()
@@ -97,22 +107,29 @@ decrypt_single_char_xor <- function(hex){
       if (sol_matrix[k,l] %in% not_letters) score[k] <- score[k] - 50 
     }
   }
-  final <- array()
-  for (l in 1:10){
-    bin <- hex_xor(input,keys[index.of(maxN(score, N = l))])
-    final[i] <- bin_plaintext(bin)
-  }
-  return(final)
+  bin <- hex_xor(hex,keys[which.max(score)])
+  return(bin)
 }
 
-maxN <- function(x, N=3){
-  len <- length(x)
-  if(N>len){
-    warning('N greater than length(x).  Setting N=length(x)')
-    N <- length(x)
-  }
-  sort(x,partial=len-N+1)[len-N+1]
+#Reorganize all the letters
+
+realtext <- list()
+for (j in 1:real_key_length){
+  m <- matrix()
+  m <- bin_encoded[[j]]
+  realtext[[j]] <- decrypt_single_char_xor(bin_hex(m))  
 }
 
+length <- length(realtext[[1]])/8
+textmatrix <- matrix(0, nrow = 2, ncol = 4)
+for(l in 1:(length-1)){
+  for (k in 1:(real_key_length)){
+    m <- realtext[[k]][(l*2-1):(l*2),1:4]
+    textmatrix <- rbind(textmatrix,m)
+  }
+}
 
-decrypt_single_char_xor(p1)
+#Output decrypted text
+
+bin_plaintext(textmatrix)
+
