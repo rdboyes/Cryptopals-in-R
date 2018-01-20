@@ -93,6 +93,25 @@ hex_xor <- function(input1, input2){
   return(m)
 }
 
+bin_xor <- function(input1, input2){
+  length <- length(input1)
+  length2 <- length(input2)
+  x <- input2
+  while (length > length2){
+    x <- rbind(x,input2)
+    length2 <- length(x)
+  } 
+  bin1 <- input1
+  bin2 <- x
+  m <- matrix(0, ncol = 4, nrow = length/4)
+  for(i in 1:(length/4)){
+    for(j in 1:4){
+      m[i,j] <- (bin1[i,j] + bin2[i,j])%%2
+    }
+  }
+  return(m)
+}
+
 bin_b64 <- function(bin){
   base64values = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
   encrypt_array <- array()
@@ -125,6 +144,7 @@ bin_b64 <- function(bin){
 }
 
 plaintext_bin <- function(text){
+  text <- stri_enc_toutf8(text)
   length <- str_length(text)
   pt_array <- array()
   text_array <- array()
