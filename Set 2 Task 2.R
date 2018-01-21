@@ -42,19 +42,29 @@ iv <- "00"
 for(i in 1:16){
   iv[i] <- "00"
 }
-plaintext_result <- list()
-length <- length(msg)/16
-plaintext_result[[1]] <- bin_plaintext(bin_xor((plaintext_bin(ecbDecrypt(msg[1:16], key))),iv))
-for(i in 2:length){
-  plaintext_result[[i]] <- bin_plaintext(bin_xor((hexl_bin(ecbDecrypt(msg[(1 + 16 * i):(16 + 16 * i)], key))),hexl_bin(msg[(1 + 16 * (i-1)):(16 + 16 * (i-1))])))
+
+cbcDecrypt <- function (hexl, key, iv){
+  plaintext_result <- list()
+  length <- length(hexl)/16
+  plaintext_result[[1]] <- bin_plaintext(bin_xor((plaintext_bin(ecbDecrypt(hexl[1:16], key))),iv))
+
+  #implement CBC mode encryption
+
+  for(i in 2:length){
+    plaintext_result[[i]] <- bin_plaintext(bin_xor((hexl_bin(ecbDecrypt(hexl[(1 + 16 * i):(16 + 16 * i)], key))),hexl_bin(hexl[(1 + 16 * (i-1)):(16 + 16 * (i-1))])))
+  }
+
+  #collect list into one string
+
+  final <- plaintext_result[[1]]
+  for (i in 2:(length(plaintext_result))){
+    final <- paste0(final, plaintext_result[[i]])
+  }
+  return(final)
 }
 
-final <- plaintext_result[[1]]
-for (i in 2:(length(plaintext_result))){
-  final <- paste0(final, plaintext_result[[i]])
-}
+cbcDecrypt(msg,"YELLOW SUBMARINE",iv)
 
-final
 
 
 

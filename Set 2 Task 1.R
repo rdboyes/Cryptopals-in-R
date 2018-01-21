@@ -1,11 +1,12 @@
 library(stringr)
 
 pksc <- function(text, length, bin = 0){
-  text <- "YELLOW SUBMARINE"
-  length <- 20
-  l <- str_length(text)
+  if(!is.raw(text)){
+    text <- as.raw(text)
+  }
+  l <- length(text)
   pad <- length - l
-  r <- plaintext_bin(text)
+  r <- hexl_bin(text)
   m <- int_bin(pad)
   for(i in 1:pad){
     r <- rbind(r, m)
@@ -17,4 +18,4 @@ pksc <- function(text, length, bin = 0){
   }
 }
 
-pksc("YELLOW SUBMARINE", 20)
+pksc("YELLOW SUBMARIN", 16)
