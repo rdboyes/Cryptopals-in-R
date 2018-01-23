@@ -9,6 +9,8 @@
 #Now, have the function choose to encrypt under ECB 1/2 the time, and under CBC the other half (just use random IVs each time for CBC). Use rand(2) to decide which to use.
 #Detect the block cipher mode the function is using each time. You should end up with a piece of code that, pointed at a block box that might be encrypting ECB or CBC, tells you which one is happening.
 
+library(openssl)
+
 random_key <- function(){
   a <- rand_bytes(16)
   return(a)
@@ -29,45 +31,56 @@ bin_hexl <- function(bin){
   return(raw)
 }
 
-encryption_oracle <- function(code){
-  code <- "YELLOW SUBMARIN"
-  key <- bin_hex(hexl_bin(random_key()))
-  before <- hexl_bin(rand_bytes(randbetween(5,10)))
-  after <- hexl_bin(rand_bytes(randbetween(5,10)))
-  code <- rbind(before, plaintext_bin(code), after)
-  length <- length(code)/8
-  good_length <- 16*(length %/% 16 + 1)
-  padded_code <- bin_hexl(pksc(bin_hexl(code), good_length, bin = 1))
-  choose <- randbetween(1,2)
-  if (choose == 1){
-    r <- ecbEncrypt(padded_code, key = key)
-  }
-  if (choose == 2){
-    
-  }
-  return(r)
-}
-
-encryption_oracle("YELLOW SUBMARIN")
-
 cbcEncrypt <- function (hexl, key, iv){
   plaintext_result <- list()
   length <- length(hexl)/16
-  plaintext_result[[1]] <- bin_plaintext(bin_xor((plaintext_bin(ecbDecrypt(hexl[1:16], key))),iv))
+  if(!is.raw(key)){
+    key <- charToRaw(key)
+  }
+  if(!is.raw(hexl)){
+    text <- charToRaw(hexl)
+  }
+  plaintext_result[[1]] <- ecbEncrypt(xor(hexl[1:16],key), iv)
   
   #implement CBC mode encryption
   
   for(i in 2:length){
-    plaintext_result[[i]] <- bin_plaintext(bin_xor((hexl_bin(ecbDecrypt(hexl[(1 + 16 * i):(16 + 16 * i)], key))),hexl_bin(hexl[(1 + 16 * (i-1)):(16 + 16 * (i-1))])))
+    plaintext_result[[i]] <- ecbEncrypt(xor(plaintext_result[[(i - 1)]], hexl[(i * 16):(i * 16 + 15)]),key)
   }
   
-  #collect list into one string
+  #collect list into one vector
   
   final <- plaintext_result[[1]]
   for (i in 2:(length(plaintext_result))){
-    final <- paste0(final, plaintext_result[[i]])
+    final <- c(final, plaintext_result[[i]])
   }
   return(final)
 }
+
+encryption_oracle <- function(code){
+  if(!is.raw(code)){
+    code <- charToRaw(code)
+  }
+  key <- random_key()
+  before <- rand_bytes(randbetween(5,10))
+  after <- rand_bytes(randbetween(5,10))
+  code <- c(before, code, after)
+  length <- length(code)
+  good_length <- 16*(length %/% 16 + 1)
+  padded_code <- pksc(code, good_length)
+  choose <- randbetween(1,2)
+  if (choose == 1){
+    r <- ecbEncrypt(padded_code, key = key)
+    print("ECB")
+    return(r)
+  }
+  if (choose == 2){
+    r <- cbcEncrypt(padded_code, key = key, iv = random_key())
+    print("CBC")
+    return(r)
+  }
+}
+
+is_ecb(encryption_oracle("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"))
 
 

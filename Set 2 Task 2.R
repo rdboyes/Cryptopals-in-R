@@ -12,7 +12,10 @@ ecbDecrypt <- function(text, key){
 
 ecbEncrypt <- function(text, key){
   library(digest)
-  aes <- AES(mode = "ECB",key = charToRaw(key))
+  if(!is.raw(key)){
+    key <- charToRaw(key) 
+  }
+  aes <- AES(mode = "ECB",key = key)
   result <- aes$encrypt(text)
   return(result)
 }

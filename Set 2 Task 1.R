@@ -1,21 +1,22 @@
 library(stringr)
 
-pksc <- function(text, length, bin = 0){
+pksc <- function(text, length, raw = 1){
   if(!is.raw(text)){
-    text <- as.raw(text)
+    text <- charToRaw(text)
   }
   l <- length(text)
   pad <- length - l
-  r <- hexl_bin(text)
-  m <- int_bin(pad)
+  r <- text
+  m <- as.raw(pad)
   for(i in 1:pad){
-    r <- rbind(r, m)
+    r <- c(r, m)
   }
-  if (bin == 0){ 
-    return(bin_plaintext(r))
-  }else if(bin != 0){
+  if (raw == 0){ 
+    return(rawToChar(r))
+  }else if(raw != 0){
     return(r)
   }
 }
 
-pksc("YELLOW SUBMARIN", 16)
+pksc("YELLOW SUBMARINE", 20, raw = 0)
+
