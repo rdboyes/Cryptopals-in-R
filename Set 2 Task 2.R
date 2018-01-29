@@ -5,7 +5,10 @@ testmsg <- "TESTING THE CODE"
 
 ecbDecrypt <- function(text, key){
   library(digest)
-  aes <- AES(mode = "ECB",key = charToRaw(key))
+  if(!is.raw(key)){
+    key <- charToRaw(key) 
+  }
+  aes <- AES(mode = "ECB",key = key)
   result <- aes$decrypt(text, raw = TRUE)
   return(result)
 }
