@@ -89,7 +89,7 @@ for(g in 1:num_blocks){
         discover[[g]] <- c(discover[[g]],as.raw(i))
       }
     }
-    print(h)
+    print(discover[[g]])
   }
 }
 
